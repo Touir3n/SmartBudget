@@ -9,8 +9,7 @@
     
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2111/2111533.png">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2111/2111533.png">
-    
-    <link rel="manifest" href="manifest.json?v=101">
+    <link rel="manifest" href="manifest.json?v=102">
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -18,7 +17,6 @@
     <style>
         :root { --gold: #FFD700; --dark-bg: #000; --card-bg: #111; --green: #44ff44; }
         
-        /* Box-sizing: Universal, keeps everything contained */
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
         html, body { 
@@ -69,7 +67,6 @@
         .hist-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 11px; color: #444; }
         .item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #111; font-size: 16px; }
 
-        /* ΔΙΟΡΘΩΜΕΝΟ ΑΝΑΔΥΟΜΕΝΟ ΜΕΝΟΥ (ΑΛΕΞΙΣΦΑΙΡΟ ΚΕΝΤΡΑΡΙΣΜΑ) */
         #setup-menu { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.95); z-index: 100;
@@ -202,7 +199,12 @@
             const b = parseFloat(document.getElementById('new-bal').value);
             const d = document.getElementById('new-date').value;
             if (!b || !d) return;
-            const days = Math.ceil((new Date(d) - new Date()) / (1000*60*60*24)) + 1;
+            
+            // Η ΔΙΟΡΘΩΣΗ ΕΙΝΑΙ ΕΔΩ: Μηδενίζουμε τις ώρες για να μετράει τέλεια τις μέρες!
+            const today = new Date(); today.setHours(0,0,0,0);
+            const target = new Date(d); target.setHours(0,0,0,0);
+            const days = Math.ceil((target - today) / (1000*60*60*24)) + 1;
+            
             data = { balance: b, initial: b, date: d, history: [], initDays: days, celebrated: false };
             save(); toggleSetup();
         }
