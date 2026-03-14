@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2111/2111533.png">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2111/2111533.png">
+    <link rel="manifest" href="manifest.json">
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <title>Smart Budget Pro</title>
+    <style>
+        :root { --gold: #FFD700; --dark-bg: #000; --card-bg: #111; --green: #44ff44; }
+        
+        html, body { 
+            height: 100%; width: 100%; margin: 0; padding: 0; 
+            overflow: hidden; position: fixed; overscroll-behavior: none;
+            background-color: var(--dark-bg); color: var(--gold);
+            font-family: -apple-system, system-ui, sans-serif;
+        }
+
+        .app-container {
+            display: flex; flex-direction: column;
+            height: 100%; width: 100%; max-width: 500px;
+            margin: 0 auto; padding: 15px; box-sizing: border-box;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .header { font-size: 20px; font-weight: bold; text-align: center; margin: 10px 0; letter-spacing: 3px; text-transform: uppercase; }
+
+        .card {
+            background: var(--card-bg); padding: 20px; border-radius: 25px;
+            text-align: center; border: 1px solid #222; flex-shrink: 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        #daily-limit { font-size: 50px; font-weight: 900; margin: 5px 0; }
+        .info-label { color: #555; font-size: 11px; text-transform: uppercase; }
+
+        .progress-box { width: 100%; height: 10px; background: #1a1a1a; border-radius: 5px; margin: 15px 0; overflow: hidden; border: 1px solid #333; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #b8860b, var(--gold)); width: 0%; transition: width 0.6s ease; }
+
+        .stats { display: flex; justify-content: space-between; font-size: 12px; color: #888; font-weight: bold; }
+        #savings-text { color: var(--green); margin-top: 10px; font-size: 14px; font-weight: bold; display: none; }
+
+        .input-area { margin: 20px 0; flex-shrink: 0; }
+        input {
+            width: 100%; padding: 18px; margin-bottom: 12px; border-radius: 15px;
+            border: 1px solid #333; background: #080808; color: #fff; font-size: 20px;
+            text-align: center; outline: none; box-sizing: border-box;
+        }
+        .btn-row { display: flex; gap: 10px; }
+        button { padding: 18px; border-radius: 15px; border: none; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .btn-main { background: var(--gold); color: #000; flex: 2; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+        .btn-alt { background: #1a1a1a; color: var(--gold); border: 1px solid #333; flex: 1; }
+
+        .history-box {
+            background: #080808; border-radius: 20px; padding: 15px;
+            border: 1px solid #111; flex-grow: 1; overflow-y: auto; margin-bottom: 10px;
+        }
+        .hist-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 11px; color: #444; }
+        .item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #111; font-size: 16px; }
+
+        #setup-menu { 
+            display: none; position: fixed; bottom: 0; left: 0; right: 0; top: 0; 
+            background: rgba(0,0,0,0.9); z-index: 100;
+            flex-direction: column; justify-content: center; padding: 20px;
+        }
+        .setup-content {
+            background: #111; padding: 30px 20px; border-radius: 25px; 
+            border: 1px solid var(--gold); width: 100%; max-width: 400px; margin: 0 auto;
+        }
+        .setup-trigger { font-size: 11px; color: #333; background: none; border: none; padding: 10px; width: 100%; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">SMART BUDGET</div>
+
+        <div class="card">
+            <div class="info-label">ΗΜΕΡΗΣΙΟ ΟΡΙΟ</div>
+            <div id="daily-limit">0.00€</div>
+            <div class="progress-box"><div id="progress-bar" class="progress-bar"></div></div>
+            <div class="stats">
+                <span id="stat-days">0 ημέρες</span>
+                <span id="stat-percent">0%</span>
+            </div>
+            <div id="savings-text">Αποταμίευση: 0.00€ ✨</div>
+            <div id="sub-info" style="font-size: 11px; color: #444; margin-top: 10px;"></div>
+        </div>
+
+        <div class="input-area">
+            <input type="number" id="expense-val" placeholder="Ποσό..." inputmode="decimal">
+            <div class="btn-row">
+                <button class="btn-main" onclick="handleAction('out')">ΚΑΤΑΧΩΡΗΣΗ</button>
+                <button class="btn-alt" onclick="handleAction('in')">ΕΣΟΔΟ</button>
+            </div>
+        </div>
+
+        <div class="history-box">
+            <div class="hist-top">
+                <span>ΠΡΟΣΦΑΤΑ ΕΞΟΔΑ</span>
+                <span onclick="undo()" style="color:var(--gold); font-weight:bold;">UNDO</span>
+            </div>
+            <div id="list"></div>
+        </div>
+
+        <button class="setup-trigger" onclick="toggleSetup()">⚙️ ΡΥΘΜΙΣΗ ΝΕΟΥ ΚΥΚΛΟΥ</button>
+        
+        <div id="setup-menu" onclick="if(event.target==this)toggleSetup()">
+            <div class="setup-content">
+                <div style="text-align:center; color:#555; margin-bottom:15px; font-size:12px;">ΝΕΟΣ ΚΥΚΛΟΣ ΠΛΗΡΩΜΗΣ</div>
+                <input type="number" id="new-bal" placeholder="Συνολικό Ποσό (€)">
+                <input type="date" id="new-date">
+                <button onclick="startCycle()" style="width:100%; background:var(--gold); color:#000;">ΕΝΑΡΞΗ ΚΥΚΛΟΥ</button>
+                <button onclick="toggleSetup()" style="width:100%; background:none; color:#ff4444; margin-top:10px;">ΑΚΥΡΩΣΗ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = JSON.parse(localStorage.getItem('smartBudgetData')) || { balance: 0, initial: 0, date: null, history: [], initDays: 0, celebrated: false };
+
+        function celebrate() {
+            var duration = 3 * 1000;
+            var end = Date.now() + duration;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#FFD700', '#FFFFFF'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#FFD700', '#FFFFFF'] });
+                if (Date.now() < end) { requestAnimationFrame(frame); }
+            }());
+        }
+
+        function update() {
+            if (!data.date) return;
+            const today = new Date(); today.setHours(0,0,0,0);
+            const target = new Date(data.date); target.setHours(0,0,0,0);
+            const daysLeft = Math.ceil((target - today) / (1000 * 60 * 60 * 24)) + 1;
+
+            if (daysLeft > 0) {
+                const daily = data.balance / daysLeft;
+                document.getElementById('daily-limit').innerText = daily.toFixed(2) + "€";
+                document.getElementById('sub-info').innerText = `Υπόλοιπο: ${data.balance.toFixed(2)}€ | Έως: ${target.toLocaleDateString('el-GR')}`;
+                
+                const p = Math.max(0, Math.min(100, (data.balance / data.initial) * 100));
+                document.getElementById('progress-bar').style.width = p + "%";
+                document.getElementById('stat-percent').innerText = Math.round(p) + "%";
+                document.getElementById('stat-days').innerText = daysLeft + " ημέρες";
+
+                const dayPrice = data.initial / data.initDays;
+                const savings = (dayPrice * (data.initDays - daysLeft)) - (data.initial - data.balance);
+                const sEl = document.getElementById('savings-text');
+                if (savings > 0.5) {
+                    sEl.innerText = `Αποταμίευση: ${savings.toFixed(2)}€ ✨`;
+                    sEl.style.display = "block";
+                    if (savings >= 50 && !data.celebrated) { celebrate(); data.celebrated = true; save(); }
+                } else { sEl.style.display = "none"; }
+                
+                document.getElementById('daily-limit').style.color = daily < 10 ? "#ff4444" : "#FFD700";
+            } else {
+                document.getElementById('daily-limit').innerText = "0.00€";
+                document.getElementById('progress-bar').style.width = "0%";
+            }
+
+            document.getElementById('list').innerHTML = data.history.slice(-10).reverse().map(i => `
+                <div class="item">
+                    <span>${i.t}</span>
+                    <span style="color:${i.type=='in'?'#4f4':'#FFD700'}">${i.type=='in'?'+':'-'}${i.a}€</span>
+                </div>
+            `).join('');
+        }
+
+        function handleAction(type) {
+            const v = parseFloat(document.getElementById('expense-val').value);
+            if (!v) return;
+            if (type === 'out') data.balance -= v; else data.balance += v;
+            data.history.push({ t: new Date().toLocaleTimeString('el-GR', {hour:'2-digit', minute:'2-digit'}), a: v.toFixed(2), type: type });
+            save();
+            document.getElementById('expense-val').value = "";
+        }
+
+        function undo() { if (data.history.length > 0) { const last = data.history.pop(); if (last.type === 'out') data.balance += parseFloat(last.a); else data.balance -= parseFloat(last.a); save(); } }
+
+        function toggleSetup() { 
+            const m = document.getElementById('setup-menu'); 
+            m.style.display = (m.style.display === 'flex') ? 'none' : 'flex'; 
+        }
+
+        function startCycle() {
+            const b = parseFloat(document.getElementById('new-bal').value);
+            const d = document.getElementById('new-date').value;
+            if (!b || !d) return;
+            const days = Math.ceil((new Date(d) - new Date()) / (1000*60*60*24)) + 1;
+            data = { balance: b, initial: b, date: d, history: [], initDays: days, celebrated: false };
+            save(); toggleSetup();
+        }
+
+        function save() { localStorage.setItem('smartBudgetData', JSON.stringify(data)); update(); }
+        update();
+    </script>
+</body>
+</html>
